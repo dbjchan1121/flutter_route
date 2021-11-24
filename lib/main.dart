@@ -21,13 +21,8 @@ class BooksApp extends StatefulWidget {
 }
 
 class _BooksAppState extends State<BooksApp> {
-  Book? _selectedBook;
-  bool show404 = false;
-  List<Book> books = [
-    Book('Stranger in a Strange Land', 'Robert A. Heinlein'),
-    Book('了不起的程序员', '图灵出版社'),
-    Book('粤语教程', '高石英')
-  ];
+  BookRouterDelegate _routerDelegate = BookRouterDelegate();
+  BookRouteInformationParser _routeInformationParser = BookRouteInformationParser();
 
   @override
   void initState() {
@@ -36,50 +31,11 @@ class _BooksAppState extends State<BooksApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Books App',
-      home: Navigator(
-        pages: [
-          MaterialPage(
-            key: const ValueKey('BookListPage'),
-            child: BooksListScreen(
-              books: books,
-              onTapped: _handleBookTapped
-            )
-          ),
-
-          if (show404) 
-            const MaterialPage(key: ValueKey('unknown page'), child: UnknownScreen())
-          ///选中某一本书
-          else if (_selectedBook != null)
-            BookDetailsPage(book: _selectedBook)
-            // MaterialPage(
-            //   key: ValueKey(_selectedBook),
-            //   child: BookDetailsScreen(book: _selectedBook)
-            // )
-        ],
-        
-        ///页面 pop 时 执行
-        onPopPage: (route, result) {
-          ///print('pop');
-          if (!route.didPop(result)) {
-            return false;
-          }
-
-          setState(() {
-            _selectedBook = null;
-          });
-          return true;
-        },
-      )
+      routeInformationParser: _routeInformationParser,
+      routerDelegate: _routerDelegate
     );
-  }
-  
-  void _handleBookTapped(Book book) {
-    setState(() {
-      _selectedBook = book;
-      print(_selectedBook);
-    });
   }
 }
 
@@ -164,15 +120,15 @@ class BookRoutePath {
   final bool isUnknown;
 
   BookRoutePath.home()
-    : id = null,
-      isUnknown = false;
-  
+      : id = null,
+        isUnknown = false;
+
   BookRoutePath.details(this.id) : isUnknown = false;
 
   BookRoutePath.unknown()
-    : id = null,
-      isUnknown = true;
-  
+      : id = null,
+        isUnknown = true;
+
   bool get isHomePage => id == null;
 
   bool get isDetailsPage => id != null;
@@ -238,7 +194,7 @@ class BookRouterDelegate extends RouterDelegate<BookRoutePath>
 
         _selectedBook = null;
         show404 = false;
-        
+        notifyListeners();
 
         return true;
       },
@@ -264,7 +220,8 @@ class BookRouterDelegate extends RouterDelegate<BookRoutePath>
         show404 = true;
         return;
       }
-
+      _selectedBook = books[path.id!];
+    } else {
       _selectedBook = null;
     }
 
@@ -285,8 +242,28 @@ class BookRouteInformationParser extends RouteInformationParser<BookRoutePath> {
     // Handle '/book/:id'
     if (uri.pathSegments.length == 2) {
       if (uri.pathSegments[0] != 'book') return BookRoutePath.unknown();
-      var remaining
+      var remaining = uri.pathSegments[1];
+      var id = int.tryParse(remaining);
+      if (id == null) return BookRoutePath.unknown();
+      return BookRoutePath.details(id);
     }
+
+    // Handle unknown routes
+    return BookRoutePath.unknown();
+  }
+
+  @override
+  RouteInformation? restoreRouteInformation(BookRoutePath path) {
+    if (path.isUnknown) {
+      return RouteInformation(location: '/404');
+    }
+    if (path.isHomePage) {
+      return RouteInformation(location: '/');
+    }
+    if (path.isDetailsPage) {
+      return RouteInformation(location: '/book/${path.id}');
+    }
+    return null;
   }
   
 }
