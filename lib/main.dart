@@ -50,12 +50,16 @@ class _BooksAppState extends State<BooksApp> {
             const MaterialPage(key: ValueKey('unknown page'), child: UnknownScreen())
           ///选中某一本书
           else if (_selectedBook != null)
-            MaterialPage(
-              key: ValueKey(_selectedBook),
-              child: BookDetailsScreen(book: _selectedBook)
-            )
+            BookDetailsPage(book: _selectedBook)
+            // MaterialPage(
+            //   key: ValueKey(_selectedBook),
+            //   child: BookDetailsScreen(book: _selectedBook)
+            // )
         ],
+        
+        ///页面 pop 时 执行
         onPopPage: (route, result) {
+          ///print('pop');
           if (!route.didPop(result)) {
             return false;
           }
@@ -105,9 +109,29 @@ class BooksListScreen extends StatelessWidget {
   }
 }
 
-// class BookDetailsPage extends Page {
+class BookDetailsPage extends Page {
+  final Book? book;
+
+  BookDetailsPage({
+    this.book,
+  }) : super(key: ValueKey(book));
+
+  @override
+  Route createRoute(BuildContext context) {
+    return PageRouteBuilder(
+      settings: this,
+      pageBuilder: (context, animation, animation2) {
+        final tween = Tween(begin: Offset(0.0, 2.0), end: Offset.zero);
+        final curveTween = CurveTween(curve: Curves.easeInOut);
+        return SlideTransition(
+          position: animation.drive(curveTween).drive(tween),
+          child: BookDetailsScreen(key: ValueKey(book), book: book),
+        );
+      }
+    );
+  }
   
-// }
+}
 
 class BookDetailsScreen extends StatelessWidget {
   final Book? book;
